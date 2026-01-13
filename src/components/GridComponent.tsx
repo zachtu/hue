@@ -8,9 +8,10 @@ type GridProps = {
   selected: Position | null;
   animation: SwapAnimation | null;
   onTileClick: (row: number, col: number) => void;
+  disabled?: boolean;
 };
 
-const GridComponent = ({ grid, selected, animation, onTileClick }: GridProps) => {
+const GridComponent = ({ grid, selected, animation, onTileClick, disabled = false }: GridProps) => {
   if (grid.length === 0) return null;
 
   return (
@@ -31,6 +32,7 @@ const GridComponent = ({ grid, selected, animation, onTileClick }: GridProps) =>
             selected={selected}
             animation={animation}
             onClick={onTileClick}
+            disabled={disabled}
           />
         ))
       )}

@@ -1,24 +1,60 @@
 import { useState, useEffect } from 'react';
 import type { Grid, Position, SwapAnimation } from './types';
 import { generateDailyGrid, checkWin, isAdjacent, swapTiles } from './utils/grid';
+import { saveGameState, loadGameState, getDateString } from './utils/storage';
+import { generateShareText, copyToClipboard } from './utils/share';
 import GridComponent from './components/GridComponent';
 
 const App = () => {
   const [grid, setGrid] = useState<Grid>([]);
   const [selected, setSelected] = useState<Position | null>(null);
   const [moves, setMoves] = useState(0);
-  const [isWon, setIsWon] = useState(false);
+  const [isComplete, setIsComplete] = useState(false);
+  const [isShowingEndModal, setIsShowingEndModal] = useState(false);
   const [animation, setAnimation] = useState<SwapAnimation | null>(null);
+  const [showCopied, setShowCopied] = useState(false);
 
   useEffect(() => {
     const today = new Date();
-    const dailyGrid = generateDailyGrid(today);
-    setGrid(dailyGrid);
-    setIsWon(checkWin(dailyGrid));
+    const savedState = loadGameState();
+
+    if (savedState) {
+      // Restore saved game
+      setGrid(savedState.grid);
+      setMoves(savedState.moves);
+      setIsComplete(savedState.completed);
+      setIsShowingEndModal(savedState.completed);
+    } else {
+      // Start new game
+      const dailyGrid = generateDailyGrid(today);
+      setGrid(dailyGrid);
+
+      // Save initial state
+      saveGameState({
+        date: getDateString(today),
+        completed: false,
+        moves: 0,
+        grid: dailyGrid,
+      });
+    }
   }, []);
 
+  // Save state whenever grid or moves change
+  useEffect(() => {
+    if (grid.length > 0) {
+      const today = new Date();
+      saveGameState({
+        date: getDateString(today),
+        completed: isComplete,
+        moves,
+        grid,
+      });
+    }
+  }, [grid, moves, isComplete]);
+
   const handleTileClick = (row: number, col: number) => {
-    if (isWon || animation) return;
+    // Disable clicks if already won or animating
+    if (isComplete || animation) return;
 
     const clickedPos: Position = { row, col };
 
@@ -60,7 +96,8 @@ const App = () => {
       setAnimation(null);
 
       if (checkWin(newGrid)) {
-        setIsWon(true);
+        setIsComplete(true);
+        setIsShowingEndModal(true);
       }
     }, 150);
 
@@ -68,8 +105,18 @@ const App = () => {
     setSelected(null);
   };
 
+  const handleShare = async () => {
+    const shareText = generateShareText(grid, moves, new Date());
+    const success = await copyToClipboard(shareText);
+
+    if (success) {
+      setShowCopied(true);
+      setTimeout(() => setShowCopied(false), 2000);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center pt-6 sm:pt-12">
+    <div className="min-h-screen bg-white flex flex-col items-center px-4 pt-6 sm:pt-12">
       {/* Header */}
       <div className="w-full max-w-md mb-4 sm:mb-8">
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 text-center mb-1">
@@ -92,11 +139,12 @@ const App = () => {
           selected={selected}
           animation={animation}
           onTileClick={handleTileClick}
+          disabled={isComplete}
         />
       </div>
 
       {/* Win Modal */}
-      {isWon && (
+      {isShowingEndModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-sm text-center">
             <div className="text-4xl sm:text-5xl mb-3 sm:mb-4">🎉</div>
@@ -106,6 +154,21 @@ const App = () => {
             <p className="text-sm sm:text-base text-slate-600 mb-4 sm:mb-6">
               You solved today's puzzle in <span className="font-bold text-slate-900">{moves}</span> moves
             </p>
+
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={handleShare}
+                className="bg-green-600 text-white text-sm sm:text-base px-6 py-2.5 rounded-lg hover:bg-green-700 active:bg-green-800 transition-colors font-medium"
+              >
+                {showCopied ? '✓ Copied!' : 'Share Results'}
+              </button>
+              <button
+                onClick={() => setIsShowingEndModal(false)}
+                className="bg-slate-100 text-slate-700 text-sm sm:text-base px-6 py-2 rounded-lg hover:bg-slate-200 active:bg-slate-300 transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
