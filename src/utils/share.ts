@@ -1,6 +1,5 @@
 import type { Grid, Color } from '../types';
 import { COLOR } from '../constants';
-import { getDateString } from './storage';
 
 /**
  * Maps colors to emoji squares
