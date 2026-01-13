@@ -106,12 +106,6 @@ const App = () => {
             <p className="text-sm sm:text-base text-slate-600 mb-4 sm:mb-6">
               You solved today's puzzle in <span className="font-bold text-slate-900">{moves}</span> moves
             </p>
-            <button
-              onClick={() => setIsWon(false)}
-              className="bg-slate-900 text-white text-sm sm:text-base px-6 py-2 rounded-lg hover:bg-slate-800 active:bg-slate-700 transition-colors"
-            >
-              Close
-            </button>
           </div>
         </div>
       )}
