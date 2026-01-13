@@ -69,7 +69,7 @@ const App = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4 py-4 sm:py-8">
+    <div className="min-h-screen bg-white flex flex-col items-center pt-6 sm:pt-12">
       {/* Header */}
       <div className="w-full max-w-md mb-4 sm:mb-8">
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 text-center mb-1">
