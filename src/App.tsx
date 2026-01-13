@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import type { Grid, Position, SwapAnimation } from './types';
 import { generateDailyGrid, checkWin, isAdjacent, swapTiles } from './utils/grid';
 import { saveGameState, loadGameState, getDateString } from './utils/storage';
-import { generateShareText, copyToClipboard } from './utils/share';
 import GridComponent from './components/GridComponent';
 
 const App = () => {
@@ -12,7 +11,7 @@ const App = () => {
   const [isComplete, setIsComplete] = useState(false);
   const [isShowingEndModal, setIsShowingEndModal] = useState(false);
   const [animation, setAnimation] = useState<SwapAnimation | null>(null);
-  const [showCopied, setShowCopied] = useState(false);
+  const [initialGrid, setInitialGrid] = useState<Grid>([]);
 
   useEffect(() => {
     const today = new Date();
@@ -24,10 +23,17 @@ const App = () => {
       setMoves(savedState.moves);
       setIsComplete(savedState.completed);
       setIsShowingEndModal(savedState.completed);
+
+      // If not completed, we need the initial grid for reset
+      if (!savedState.completed) {
+        const dailyGrid = generateDailyGrid(today);
+        setInitialGrid(dailyGrid);
+      }
     } else {
       // Start new game
       const dailyGrid = generateDailyGrid(today);
       setGrid(dailyGrid);
+      setInitialGrid(dailyGrid);
 
       // Save initial state
       saveGameState({
@@ -105,14 +111,21 @@ const App = () => {
     setSelected(null);
   };
 
-  const handleShare = async () => {
-    const shareText = generateShareText(grid, moves, new Date());
-    const success = await copyToClipboard(shareText);
+  const handleReset = () => {
+    if (isComplete) return; // Can't reset after winning
 
-    if (success) {
-      setShowCopied(true);
-      setTimeout(() => setShowCopied(false), 2000);
-    }
+    setGrid(initialGrid);
+    setMoves(0);
+    setSelected(null);
+
+    // Save reset state
+    const today = new Date();
+    saveGameState({
+      date: getDateString(today),
+      completed: false,
+      moves: 0,
+      grid: initialGrid,
+    });
   };
 
   return (
@@ -141,6 +154,18 @@ const App = () => {
           onTileClick={handleTileClick}
           disabled={isComplete}
         />
+
+        {/* Reset Button */}
+        {!isComplete && moves > 0 && (
+          <div className="mt-4 text-center">
+            <button
+              onClick={handleReset}
+              className="text-xs sm:text-sm text-slate-500 hover:text-slate-700 transition-colors cursor-pointer"
+            >
+              Reset Puzzle
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Win Modal */}
@@ -155,20 +180,12 @@ const App = () => {
               You solved today's puzzle in <span className="font-bold text-slate-900">{moves}</span> moves
             </p>
 
-            <div className="flex flex-col gap-2">
-              <button
-                onClick={handleShare}
-                className="bg-green-600 text-white text-sm sm:text-base px-6 py-2.5 rounded-lg hover:bg-green-700 active:bg-green-800 transition-colors font-medium"
-              >
-                {showCopied ? '✓ Copied!' : 'Share Results'}
-              </button>
-              <button
-                onClick={() => setIsShowingEndModal(false)}
-                className="bg-slate-100 text-slate-700 text-sm sm:text-base px-6 py-2 rounded-lg hover:bg-slate-200 active:bg-slate-300 transition-colors"
-              >
-                Close
-              </button>
-            </div>
+            <button
+              onClick={() => setIsShowingEndModal(false)}
+              className="bg-slate-100 text-slate-700 text-sm sm:text-base px-6 py-2 rounded-lg hover:bg-slate-200 active:bg-slate-300 transition-colors"
+            >
+              Close
+            </button>
           </div>
         </div>
       )}
